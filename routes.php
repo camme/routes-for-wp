@@ -1,5 +1,7 @@
 <?php 
+
 /*
+
 	Plugin Name: Routes 
 	Plugin URI: http://www.onezerozeroone.com/
 	Description: Create routes in wordpress
@@ -7,6 +9,7 @@
 	Author: camilo tapia
 	Author URI: http://www.onezerozeroone.com
 	License: GPL2
+	
 */
 
 /*
@@ -28,20 +31,21 @@
     
 */
 
-	/*  Copyright 2011  camilo tapia  (email : camilo.tapia@24hr.se)
+/*  
+    Copyright 2011  camilo tapia  (email : camilo.tapia@gmail.com)
 
-	    This program is free software; you can redistribute it and/or modify
-	    it under the terms of the GNU General Public License, version 2, as 
-	    published by the Free Software Foundation.
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License, version 2, as 
+    published by the Free Software Foundation.
 
-	    This program is distributed in the hope that it will be useful,
-	    but WITHOUT ANY WARRANTY; without even the implied warranty of
-	    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	    GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-	    You should have received a copy of the GNU General Public License
-	    along with this program; if not, write to the Free Software
-	    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 class Routes
@@ -86,7 +90,7 @@ class Routes
 	    return $this->routeAction;
     }
     
-    public function get($regExp, $action)
+    public function get($catchString, $action)
     {
         
         if (!$this->hookIsSet)
@@ -96,10 +100,15 @@ class Routes
         }
         
         $routeItem = new stdClass;
-        $routeItem->regExp = $regExp;
+        $routeItem->catchString = $catchString;
         $routeItem->action = $action;
         
         array_push($this->routes, $routeItem);
+        
+    }
+    
+    function sp($catch)
+    {
         
     }
     
@@ -107,24 +116,109 @@ class Routes
     {
         $routesInstance = Routes::getInstance();
         
-        //$match = array();
         $action = false;
         
         foreach($routesInstance->getRoutesList() as $routeItem) 
         {
-            preg_match_all($routeItem->regExp, $wp->request, $match);
-            if (sizeof($match) > 0)
+            
+            preg_match('/^\/.*\/$/', $routeItem->catchString, $isRegExp);
+            
+            //echo "CHECK $routeItem->catchString\n";
+            
+            // this is an :url 
+            if (sizeof($isRegExp) == 0)
             {
-                $action = new StdClass;
-                $action->action = $routeItem->action;
-                $action->matches = $match;
+                // split the requetst co compare them
+                $requestPath = '/' . $wp->request;
+                if (substr($requestPath, strlen($requestPath) - 1, 1) == "/")
+                {
+                    $requestPath = substr($requestPath, 0, strlen($requestPath) - 1);
+                }
                 
-                break;
+                $listRequestParts = explode('/', $requestPath);
+                $listCatchParts = explode('/', $routeItem->catchString);
+                
+                //echo $routeItem->catchString;
+                //var_dump($listCatchParts);
+                
+                //echo sizeof($listRequestParts) . " == " . sizeof($listCatchParts);
+                
+                // if there are the same size we compare them
+                if (sizeof($listRequestParts) == sizeof($listCatchParts))
+                {
+                    $nrOfMatches = 0;
+                    $catches = array();
+                    for($i = 0; $i < sizeof($listRequestParts); $i++)
+                    {
+                        $urlPart = $listRequestParts[$i];
+                        $catchPart = $listCatchParts[$i];
+                        
+                        if ($urlPart == $catchPart)
+                        {
+                            $nrOfMatches++;
+                          //  echo "match\n";
+                        }
+                        else if (substr($catchPart, 0, 1) == ":")
+                        {
+                            $nrOfMatches++;
+                            $nameOfCactch = substr($catchPart, 1);
+                            $catches[$nameOfCactch] = $urlPart;
+                            //echo "match\n";
+                        }
+                        else
+                        {
+                      //      echo "no match\n";
+                    //        echo "$urlPart ==  $catchPart\n";
+                        }
+                    }
+                    
+                  //  echo sizeof($listRequestParts) . '==' . sizeof($catches);
+                    
+                    // we have a match
+                    if (sizeof($listRequestParts) == $nrOfMatches)
+                    {
+                        $action = new StdClass;
+                        $action->action = $routeItem->action;
+                        $action->matches = (object)$catches;
+                      //  echo "FOUND\n";
+                        break;
+                    }
+                }
+                
+                
+                /*preg_match_all('(:\w+)', $wp->request, $match);
+                if (sizeof($match) > 0)
+                {
+                    $action = new StdClass;
+                    $action->action = $routeItem->action;
+                    
+                    var_dump($match);
+                    
+                    $action->matches = $match;
+
+                    break;
+                }*/
             }
+            else
+            // this is a reg exp catch
+            {
+                preg_match_all($routeItem->catchString, $wp->request, $match);
+                if (sizeof($match) > 0 && sizeof($match[0]) > 0)
+                {
+                    $action = new StdClass;
+                    $action->action = $routeItem->action;
+                    $action->matches = $match;
+                  // echo "FOUND\n";
+                    break;
+                }
+            }
+            
+            
         }
         
         if ($action !== false)
         {
+          // var_dump($action);
             $routesInstance->setRouteAction($action);
             add_action('template_redirect', 'Routes::doRoute');
         }
@@ -142,7 +236,8 @@ class Routes
                 $wp_query->is_archive = true;
             }
         
-        header("HTTP/1.1 200 OK");
+        header("HTTP/1.0 200 OK");
+        header("Content-Type: text/html; charset=UTF-8");
         
         //var_dump($routeAction->action);
         //var_dump($routeAction);
