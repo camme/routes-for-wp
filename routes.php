@@ -26,7 +26,7 @@
     
     All matches are the available like this:
     $routes = Routes::getInstance();
-    $routeAction = $routes->getRouteAction();
+    $routeAction = $routes->getAction();
     var_dump($routeAction->matches);
     
 */
@@ -93,10 +93,6 @@ class Routes
 	    return $this->routeAction;
     }
     
-    public function getAction()
-	{
-	    return $this->routeAction;
-    }
     
     public function get($catchString, $action)
     {
@@ -239,7 +235,7 @@ class Routes
     public static function doRoute()
     {
         $routesInstance = Routes::getInstance();
-        $routeAction = $routesInstance->getRouteAction();
+        $routeAction = $routesInstance->getAction();
         
         // make sure we dont show a 404
         global $wp_query;
