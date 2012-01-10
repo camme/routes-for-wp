@@ -57,6 +57,8 @@ class Routes
     
     private $routeAction = false;
     
+    public $param;
+    
     // singleton instance reference
 	public static $singletonRef = NULL;
     
@@ -73,6 +75,7 @@ class Routes
 	public function __construct()
 	{
 	    //$this->action = new stdClass;
+	    $this->param = new stdClass;
     }
     
     public function getRoutesList()
@@ -83,9 +86,9 @@ class Routes
     public function setRouteAction($actionItem)
 	{
 	    $this->routeAction = $actionItem;
-    }
+    }   
     
-    public function getRouteAction()
+    public function getAction()
 	{
 	    return $this->routeAction;
     }
@@ -102,13 +105,11 @@ class Routes
         $routeItem = new stdClass;
         $routeItem->catchString = $catchString;
         $routeItem->action = $action;
+        $routeItem->method = "GET";
         
         array_push($this->routes, $routeItem);
         
-    }
-    
-    function sp($catch)
-    {
+        return $this->routes;
         
     }
     
@@ -179,7 +180,9 @@ class Routes
                     {
                         $action = new StdClass;
                         $action->action = $routeItem->action;
-                        $action->matches = (object)$catches;
+                        $routesInstance->param = (object)$catches;
+                        $action->matches = $routesInstance->param;
+                        $action->type = ":url";
                       //  echo "FOUND\n";
                         break;
                     }
@@ -207,7 +210,9 @@ class Routes
                 {
                     $action = new StdClass;
                     $action->action = $routeItem->action;
-                    $action->matches = $match;
+                    $routesInstance->param = $match;
+                    $action->matches = $routesInstance->param;
+                    $action->type = "regexp";
                   // echo "FOUND\n";
                     break;
                 }
@@ -222,6 +227,8 @@ class Routes
             $routesInstance->setRouteAction($action);
             add_action('template_redirect', 'Routes::doRoute');
         }
+        
+        return $action;
     }
     
     public static function doRoute()
@@ -237,7 +244,7 @@ class Routes
             }
         
         header("HTTP/1.0 200 OK");
-        header("Content-Type: text/html; charset=UTF-8");
+        //header("Content-Type: text/html; charset=UTF-8");
         
         //var_dump($routeAction->action);
         //var_dump($routeAction);
@@ -251,8 +258,7 @@ class Routes
             include (TEMPLATEPATH . '/' . $routeAction->action['name']);
             exit;
         }
-        
-       
+
     }
     
 }
