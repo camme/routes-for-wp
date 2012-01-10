@@ -93,6 +93,11 @@ class Routes
 	    return $this->routeAction;
     }
     
+    public function getAction()
+	{
+	    return $this->routeAction;
+    }
+    
     public function get($catchString, $action)
     {
         
@@ -163,7 +168,7 @@ class Routes
                         {
                             $nrOfMatches++;
                             $nameOfCactch = substr($catchPart, 1);
-                            $catches[$nameOfCactch] = $urlPart;
+                            $catches[$nameOfCactch] = urldecode($urlPart);
                             //echo "match\n";
                         }
                         else
